@@ -1,6 +1,6 @@
 cask 'pydiosync' do
-  version '1.2.3'
-  sha256 '6cf744a5be2d3672f26c1a24d062d0c79243eacc403c14f7c646a981baab79f8'
+  version '1.2.5'
+  sha256 'f63f7c618bb77db52e4ee1c6dc9d63c73502a9cb72777bcce990b1c11561bf91'
 
   url "https://download.pydio.com/pub/pydio-sync/release/#{version}/PydioSync-MacOSX-Installer-v#{version}.dmg"
   name 'PydioSync'
