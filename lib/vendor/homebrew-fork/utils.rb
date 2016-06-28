@@ -1,5 +1,14 @@
 require 'pathname'
-require 'vendor/homebrew-fork/exceptions'
+# version that should definitely work
+$LOAD_PATH.unshift(File.expand_path('../../../../../../Homebrew', Pathname.new(__FILE__).realpath))
+# ls ../../../../../../Homebrew from this folder works
+
+# assuming that path is from homebrew/cask
+# $LOAD_PATH.unshift(File.expand_path('../../../Homebrew', Pathname.new(__FILE__).realpath))
+
+# this works but it seems a bad way as it does not include the file's dependencies if there are any
+# require_relative '../../../../../../Homebrew/exceptions'
+require 'exceptions'
 
 def homebrew_fork_system cmd, *args
   puts "#{cmd} #{args*' '}" if Hbc.verbose
@@ -15,7 +24,7 @@ end
 
 # Kernel.system but with exceptions
 def safe_system cmd, *args
-  homebrew_fork_system(cmd, *args) or raise Hbc::ErrorDuringExecution.new(cmd, args)
+  homebrew_fork_system(cmd, *args) or raise ErrorDuringExecution.new(cmd, args)
 end
 
 # prints no output
