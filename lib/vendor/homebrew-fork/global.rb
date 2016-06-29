@@ -1,5 +1,5 @@
 require 'vendor/homebrew-fork/monkeypatch_pathname'
-require 'vendor/homebrew-fork/exceptions'
+require 'exceptions'
 require 'vendor/homebrew-fork/utils'
 
 def cache
