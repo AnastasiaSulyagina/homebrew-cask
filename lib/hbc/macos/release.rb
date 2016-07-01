@@ -1,4 +1,5 @@
 # originally from Homebrew
+# TODO: should stay? 10.0-10.7 - ???
 
 require 'rubygems'
 

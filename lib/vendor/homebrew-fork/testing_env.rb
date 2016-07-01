@@ -1,7 +1,6 @@
 # Require this file to build a testing environment.
-
-require 'vendor/homebrew-fork/monkeypatch_pathname'
-require 'vendor/homebrew-fork/utils'
+# TODO Monkey-patch thing keep path to hb extensions
+require 'utils'
 require 'tmpdir'
 
 TEST_TMPDIR = Dir.mktmpdir("homebrew_tests")

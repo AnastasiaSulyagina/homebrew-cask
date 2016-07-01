@@ -3,6 +3,8 @@ module Hbc::Utils; end
 require 'yaml'
 require 'open3'
 require 'stringio'
+# TODO add the path, check ohai opoo onoe using utils thing
+require 'utils'
 
 require 'hbc/utils/tty'
 

@@ -1,5 +1,5 @@
 # originally from Homebrew
-
+# TODO remove/check all: Hardware::CPU -> Hardware + require
 module Hbc::Hardware::CPU
   extend self
 
