@@ -1,6 +1,10 @@
 require 'pathname'
 # version that should definitely work
-$LOAD_PATH.unshift(File.expand_path('../../../../../../Homebrew', Pathname.new(__FILE__).realpath))
+
+# add homebrew-cask lib to load path
+hb_root = Pathname(File.expand_path("../../../../../../", __FILE__))
+$:.push(hb_root.join('Homebrew').to_s)
+#$LOAD_PATH.unshift(File.expand_path('../../../../../../Homebrew', Pathname.new(__FILE__).realpath))
 # ls ../../../../../../Homebrew from this folder works
 
 # assuming that path is from homebrew/cask
