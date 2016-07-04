@@ -1,7 +1,8 @@
 require 'pathname'
 require 'rspec/its'
 require 'rspec/wait'
-
+homebrew_library_path = Pathname.new(File.expand_path(__FILE__+'/../../../../../Homebrew'))
+$:.push(homebrew_library_path)
 if ENV['COVERAGE']
   require 'coveralls'
   Coveralls.wear_merged!
