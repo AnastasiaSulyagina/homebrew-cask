@@ -23,6 +23,7 @@ class Hbc::Installer
     @command = options.fetch(:command, Hbc::SystemCommand)
     @force = options.fetch(:force, false)
     @skip_cask_deps = options.fetch(:skip_cask_deps, false)
+    @require_sha = options.fetch(:require_sha, false)
   end
 
   def self.print_caveats(cask)
@@ -69,6 +70,7 @@ class Hbc::Installer
 
     begin
       satisfy_dependencies
+      verify_has_sha if @require_sha && !@force
       download
       verify
       extract_primary_container
@@ -84,7 +86,7 @@ class Hbc::Installer
   end
 
   def summary
-    s = if MacOS.release >= :lion and not ENV['HOMEBREW_NO_EMOJI']
+    s = if MacOS.release >= :lion && !ENV['HOMEBREW_NO_EMOJI']
       (ENV['HOMEBREW_INSTALL_BADGE'] || "\xf0\x9f\x8d\xba") + '  '
     else
       "#{Tty.blue.bold}==>#{Tty.reset.bold} Success!#{Tty.reset} "
@@ -100,6 +102,12 @@ class Hbc::Installer
     @downloaded_path
   end
 
+  def verify_has_sha
+    odebug "Checking cask has checksum"
+    return unless @cask.sha256 == :no_check
+    raise Hbc::CaskNoShasumError.new (@cask)
+  end
+
   def verify
     Hbc::Verify.all(@cask, @downloaded_path)
   end
@@ -107,7 +115,7 @@ class Hbc::Installer
   def extract_primary_container
     odebug "Extracting primary container"
     FileUtils.mkdir_p @cask.staged_path
-    container = if @cask.container and @cask.container.type
+    container = if @cask.container && @cask.container.type
        Hbc::Container.from_type(@cask.container.type)
     else
        Hbc::Container.for_path(@downloaded_path, @command)
@@ -154,7 +162,7 @@ class Hbc::Installer
       end
     elsif @cask.depends_on.macos.length > 1
       unless @cask.depends_on.macos.include?(Gem::Version.new(MacOS.release.to_s))
-        raise Hbc::CaskError.new "Cask #{@cask} depends on macOS release being one of: #{@cask.depends_on.macos(&:to_s).inspect}, but you are running release #{MacOS.release}."
+        raise Hbc::CaskError.new "Cask #{@cask} depends on macOS release being one of [#{@cask.depends_on.macos.map(&:to_s).join(', ')}], but you are running release #{MacOS.release}."
       end
     else
       unless MacOS.release == @cask.depends_on.macos.first
@@ -172,7 +180,7 @@ class Hbc::Installer
                          (Hardware::CPU.intel? ? :x86_64 : :ppc_64)
                       ]
     return unless Array(@cask.depends_on.arch & @current_arch).empty?
-    raise Hbc::CaskError.new "Cask #{@cask} depends on hardware architecture being one of #{@cask.depends_on.arch.inspect}, but you are running #{@current_arch.inspect}"
+    raise Hbc::CaskError.new "Cask #{@cask} depends on hardware architecture being one of [#{@cask.depends_on.arch.map(&:to_s).join(', ')}], but you are running #{@current_arch.inspect}"
   end
 
   def x11_dependencies
@@ -183,7 +191,7 @@ class Hbc::Installer
   end
 
   def formula_dependencies
-    return unless @cask.depends_on.formula and not @cask.depends_on.formula.empty?
+    return unless @cask.depends_on.formula && !@cask.depends_on.formula.empty?
     ohai 'Installing Formula dependencies from Homebrew'
     @cask.depends_on.formula.each do |dep_name|
       print "#{dep_name} ... "
@@ -201,7 +209,7 @@ class Hbc::Installer
   end
 
   def cask_dependencies
-    return unless @cask.depends_on.cask and not @cask.depends_on.cask.empty?
+    return unless @cask.depends_on.cask && !@cask.depends_on.cask.empty?
     ohai "Installing Cask dependencies: #{@cask.depends_on.cask.join(', ')}"
     deps = Hbc::CaskDependencies.new(@cask)
     deps.sorted.each do |dep_token|
@@ -323,8 +331,8 @@ class Hbc::Installer
     gain_permissions_remove(@cask.staged_path)
 
     # Homebrew-cask metadata
-    if @cask.metadata_versioned_container_path.respond_to?(:children) and
-        @cask.metadata_versioned_container_path.exist?
+    if @cask.metadata_versioned_container_path.respond_to?(:children) &&
+         @cask.metadata_versioned_container_path.exist?
       @cask.metadata_versioned_container_path.children.each do |subdir|
         unless PERSISTENT_METADATA_SUBDIRS.include?(subdir.basename)
           gain_permissions_remove(subdir)
