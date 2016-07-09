@@ -60,7 +60,7 @@ class Hbc::HbVCSDownloadStrategy < Hbc::AbstractDownloadStrategy
   end
 end
 
-class Hbc::HbCurlDownloadStrategy < Hbc::AbstractDownloadStrategy
+class Hbc::CurlDownloadStrategy < Hbc::AbstractDownloadStrategy
   # todo should be part of url object
   def mirrors
     @mirrors ||= []
@@ -84,6 +84,11 @@ class Hbc::HbCurlDownloadStrategy < Hbc::AbstractDownloadStrategy
 
   def downloaded_size
     temporary_path.size? or 0
+  end
+
+  def _fetch
+    odebug "Calling curl with args #{curl_args.utf8_inspect}"
+    curl(*curl_args)
   end
 
   def fetch
@@ -114,94 +119,12 @@ class Hbc::HbCurlDownloadStrategy < Hbc::AbstractDownloadStrategy
     else
       puts "Already downloaded: #{tarball_path}"
     end
-  rescue CurlDownloadStrategyError
-    raise if mirrors.empty?
-    puts "Trying a mirror..."
-    @url = mirrors.shift
-    retry
-  else
     tarball_path
-  end
-
-  private
-
-  def curl(*args)
-    args << '--connect-timeout' << '5' unless mirrors.empty?
-    super
-  end
-
-  def ext
-    # We need a Pathname because we've monkeypatched extname to support double
-    # extensions (e.g. tar.gz). -- todo actually that monkeypatch has been removed
-    Pathname.new(@url).extname[/[^?]+/]
-  end
-end
-
-class Hbc::HbSubversionDownloadStrategy < Hbc::HbVCSDownloadStrategy
-  def cache_tag
-    # todo: pass versions as symbols, support :head here
-    version == 'head' ? "svn-HEAD" : "svn"
-  end
-
-  def repo_valid?
-    @clone.join(".svn").directory?
-  end
-
-  def repo_url
-    `svn info '#{@clone}' 2>/dev/null`.strip[/^URL: (.+)$/, 1]
-  end
-
-  def fetch
-    @url = @url.sub(/^svn\+/, '') if @url =~ %r[^svn\+http://]
-    ohai "Checking out #{@url}"
-
-    clear_cache unless @url.chomp("/") == repo_url || quiet_system('svn', 'switch', @url, @clone)
-
-    if @clone.exist? && !repo_valid?
-      puts "Removing invalid SVN repo from cache"
-      clear_cache
-    end
-
-    case @ref_type
-      when :revision
-        fetch_repo @clone, @url, @ref
-      when :revisions
-        # nil is OK for main_revision, as fetch_repo will then get latest
-        main_revision = @ref[:trunk]
-        fetch_repo @clone, @url, main_revision, true
-
-        get_externals do |external_name, external_url|
-          fetch_repo @clone+external_name, external_url, @ref[external_name], true
-        end
-      else
-        fetch_repo @clone, @url
-    end
-  end
-
-  def shell_quote(str)
-    # Oh god escaping shell args.
-    # See http://notetoself.vrensk.com/2008/08/escaping-single-quotes-in-ruby-harder-than-expected/
-    str.gsub(/\\|'/) { |c| "\\#{c}" }
-  end
-
-  def get_externals
-    `svn propget svn:externals '#{shell_quote(@url)}'`.chomp.each_line do |line|
-      name, url = line.split(/\s+/)
-      yield name, url
-    end
-  end
-end
-
-class Hbc::CurlDownloadStrategy < Hbc::HbCurlDownloadStrategy
-
-  def _fetch
-    odebug "Calling curl with args #{curl_args.utf8_inspect}"
-    curl(*curl_args)
-  end
-
-  def fetch
-    super
-    tarball_path
+    rescue CurlDownloadStrategyError
+      raise if mirrors.empty?
+      puts "Trying a mirror..."
+      @url = mirrors.shift
+      retry
   end
 
   private
@@ -212,6 +135,8 @@ class Hbc::CurlDownloadStrategy < Hbc::HbCurlDownloadStrategy
       args.concat(cookies_args)
       args.concat(referer_args)
     end
+    #args << '--connect-timeout' << '5' unless mirrors.empty?
+    #super
   end
 
   def default_curl_args
@@ -247,6 +172,12 @@ class Hbc::CurlDownloadStrategy < Hbc::HbCurlDownloadStrategy
       []
     end
   end
+
+  def ext
+    # We need a Pathname because we've monkeypatched extname to support double
+    # extensions (e.g. tar.gz). -- todo actually that monkeypatch has been removed
+    Pathname.new(@url).extname[/[^?]+/]
+  end
 end
 
 class Hbc::CurlPostDownloadStrategy < Hbc::CurlDownloadStrategy
@@ -268,14 +199,50 @@ class Hbc::CurlPostDownloadStrategy < Hbc::CurlDownloadStrategy
   end
 end
 
-class Hbc::SubversionDownloadStrategy < Hbc::HbSubversionDownloadStrategy
+class Hbc::SubversionDownloadStrategy < Hbc::HbVCSDownloadStrategy
+
+  def cache_tag
+    # todo: pass versions as symbols, support :head here
+    version == 'head' ? "svn-HEAD" : "svn"
+  end
+
+  def repo_valid?
+    @clone.join(".svn").directory?
+  end
+
+  def repo_url
+    `svn info '#{@clone}' 2>/dev/null`.strip[/^URL: (.+)$/, 1]
+  end
 
   # super does not provide checks for already-existing downloads
   def fetch
     if tarball_path.exist?
       puts "Already downloaded: #{tarball_path}"
     else
-      super
+      @url = @url.sub(/^svn\+/, '') if @url =~ %r[^svn\+http://]
+      ohai "Checking out #{@url}"
+
+      clear_cache unless @url.chomp("/") == repo_url || quiet_system('svn', 'switch', @url, @clone)
+
+      if @clone.exist? && !repo_valid?
+        puts "Removing invalid SVN repo from cache"
+        clear_cache
+      end
+
+      case @ref_type
+        when :revision
+          fetch_repo @clone, @url, @ref
+        when :revisions
+          # nil is OK for main_revision, as fetch_repo will then get latest
+          main_revision = @ref[:trunk]
+          fetch_repo @clone, @url, main_revision, true
+
+          get_externals do |external_name, external_url|
+            fetch_repo @clone+external_name, external_url, @ref[external_name], true
+          end
+        else
+          fetch_repo @clone, @url
+      end
       compress
     end
     tarball_path
@@ -314,6 +281,19 @@ class Hbc::SubversionDownloadStrategy < Hbc::HbSubversionDownloadStrategy
 
   def tarball_path
     @tarball_path ||= cached_location.dirname.join(cached_location.basename.to_s + "-#{@cask.version}.tar")
+  end
+
+  def shell_quote(str)
+    # Oh god escaping shell args.
+    # See http://notetoself.vrensk.com/2008/08/escaping-single-quotes-in-ruby-harder-than-expected/
+    str.gsub(/\\|'/) { |c| "\\#{c}" }
+  end
+
+  def get_externals
+    `svn propget svn:externals '#{shell_quote(@url)}'`.chomp.each_line do |line|
+      name, url = line.split(/\s+/)
+      yield name, url
+    end
   end
 
   private
