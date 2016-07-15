@@ -83,23 +83,6 @@ def puts_columns(items, star_items = [])
   puts Hbc::Utils.stringify_columns(items, star_items)
 end
 
-# TODO: delete when reference to curl_args in brew is fixed
-def curl(*args)
-  curl = Pathname.new "/usr/bin/curl"
-  raise "#{curl} is not executable" unless curl.exist? && curl.executable?
-
-  flags = HOMEBREW_CURL_ARGS
-  flags = flags.delete("#") if Hbc.verbose
-
-  args = [flags, HOMEBREW_USER_AGENT, *args]
-  # See https://github.com/Homebrew/homebrew/issues/6103
-  args << "--insecure" if MacOS.release < "10.6"
-  args << "--verbose" if ENV["HOMEBREW_CURL_VERBOSE"]
-  args << "--silent" unless $stdout.tty?
-
-  safe_system curl, *args
-end
-
 module Hbc::Utils
   def self.which(cmd, path = ENV["PATH"])
     unless File.basename(cmd) == cmd.to_s

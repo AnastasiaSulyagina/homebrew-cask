@@ -38,8 +38,8 @@ class Hbc::Download
 
   def fetch
     self.downloaded_path = downloader.fetch
-  rescue StandardError => e
-    raise Hbc::CaskError, "Download failed on Cask '#{cask}' with message: #{e}"
+  #rescue StandardError => e
+  #  raise Hbc::CaskError, "Download failed on Cask '#{cask}' with message: #{e}"
   end
 
   # this symlink helps track which downloads are ours
