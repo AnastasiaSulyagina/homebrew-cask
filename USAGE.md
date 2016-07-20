@@ -42,7 +42,7 @@ The command `brew cask install` accepts a Cask token as returned by `brew cask s
 $ brew cask install google-chrome
 ==> Downloading https://dl.google.com/chrome/mac/stable/GGRO/googlechrome.dmg
 ==> Moving App 'Google Chrome.app' to '/Applications/Google Chrome.app'
-🍺  google-chrome staged at '/usr/local/Caskroom/google-chrome/latest' (3 files, 288K)
+🍺  google-chrome was successfully installed!
 ```
 
 ## Uninstalling Casks
@@ -133,11 +133,7 @@ It is generally safe to run updates from within an application.
 
 ## Updating/Upgrading the Homebrew-Cask Tool
 
-When a new version Homebrew-Cask is released, it will appear in the output of `brew outdated` after running `brew update`. You can upgrade it via the normal Homebrew `brew upgrade` workflow:
-
-```bash
-$ brew update; brew cleanup; brew cask cleanup
-```
+Homebrew [automatically taps and keeps Homebrew-Cask updated](https://github.com/caskroom/homebrew-cask/pull/15381). `brew update` is all that is required.
 
 ## Additional Taps (optional)
 
